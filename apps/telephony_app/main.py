@@ -51,7 +51,7 @@ telephony_server = TelephonyServer(
         TwilioInboundCallConfig(
             url="/inbound_call",
             agent_config=ChatGPTAgentConfig(
-                initial_message=BaseMessage(text="What up"),
+                initial_message=BaseMessage(text="What's up"),
                 prompt_preamble="Have a pleasant conversation about life",
                 generate_responses=True,
             ),

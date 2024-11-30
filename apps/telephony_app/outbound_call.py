@@ -21,11 +21,11 @@ async def main():
 
     outbound_call = OutboundCall(
         base_url=BASE_URL,
-        to_phone="+15555555555",
-        from_phone="+15555555555",
+        to_phone="+16503907338",
+        from_phone="+16507188240",
         config_manager=config_manager,
         agent_config=ChatGPTAgentConfig(
-            initial_message=BaseMessage(text="What up"),
+            initial_message=BaseMessage(text="Hello, this is a pristine AI. How is your today so far?"),
             prompt_preamble="Have a pleasant conversation about life",
             generate_responses=True,
         ),
