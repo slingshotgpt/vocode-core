@@ -13,7 +13,7 @@ from pyngrok import ngrok
 from speller_agent import SpellerAgentFactory
 
 from vocode.logging import configure_pretty_logging
-from vocode.streaming.models.agent import ChatGPTAgentConfig
+from vocode.streaming.models.agent import ChatGPTAgentConfig #, SlingshotGPTAgentConfig
 from vocode.streaming.models.message import BaseMessage
 from vocode.streaming.models.telephony import TwilioConfig
 from vocode.streaming.telephony.config_manager.redis_config_manager import RedisConfigManager
@@ -25,11 +25,12 @@ load_dotenv()
 
 configure_pretty_logging()
 
+print("Logging at App")
 app = FastAPI(docs_url=None)
 
 config_manager = RedisConfigManager()
 
-BASE_URL = os.getenv("BASE_URL")
+BASE_URL = 'instance-1.lb-1.inbound.slingshotgpt-dialers.com' #os.getenv("BASE_URL")
 
 if not BASE_URL:
     ngrok_auth = os.environ.get("NGROK_AUTH_TOKEN")
@@ -51,9 +52,12 @@ telephony_server = TelephonyServer(
         TwilioInboundCallConfig(
             url="/inbound_call",
             agent_config=ChatGPTAgentConfig(
-                initial_message=BaseMessage(text="What's up"),
-                prompt_preamble="Have a pleasant conversation about life",
+            #agent_config=SlingshotGPTAgentConfig(
+                initial_message=BaseMessage(text="Welcome to SlingshotGPT.  How can I assist you today?"),
+                prompt_preamble="You are helpful assistant and answer how to develop an AI agent only.",
                 generate_responses=True,
+                interrupt_sensitivity="high",
+                initial_message_delay=2,
             ),
             # uncomment this to use the speller agent instead
             # agent_config=SpellerAgentConfig(
@@ -72,3 +76,10 @@ telephony_server = TelephonyServer(
 )
 
 app.include_router(telephony_server.get_router())
+
+# Add a health check endpoint
+@app.get("/health")
+async def health_check():
+    # Here you can add logic to check the health of your integrations, databases, etc.
+    # Currently, it just returns a simple OK message
+    return {"status": "ok"}

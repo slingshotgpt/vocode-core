@@ -3,7 +3,13 @@ from typing import Optional, Tuple
 from vocode.streaming.agent.abstract_factory import AbstractAgentFactory
 from vocode.streaming.agent.base_agent import BaseAgent, RespondAgent
 from vocode.streaming.agent.chat_gpt_agent import ChatGPTAgent
-from vocode.streaming.models.agent import AgentConfig, AgentType, ChatGPTAgentConfig
+#from vocode.streaming.agent.slingshot_agent import SlingshotAgent
+from vocode.streaming.models.agent import (
+    AgentConfig,
+    AgentType,
+    ChatGPTAgentConfig,
+    #SlingshotGPTAgentConfig,
+)
 
 
 class SpellerAgentConfig(AgentConfig, type="agent_speller"):
@@ -69,5 +75,7 @@ class SpellerAgentFactory(AbstractAgentFactory):
         # If the agent configuration type is agent_speller, create a SpellerAgent.
         elif isinstance(agent_config, SpellerAgentConfig):
             return SpellerAgent(agent_config=agent_config)
+        #elif isinstance(agent_config, SlingshotGPTAgentConfig):
+        #    return SlingshotAgent(agent_config=agent_config)
         # If the agent configuration type is not recognized, raise an exception.
         raise Exception("Invalid agent config")

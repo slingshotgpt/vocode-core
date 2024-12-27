@@ -1,0 +1,7 @@
+uvicorn
+redis
+./vocode-ss
+pyngrok
+openai
+nltk
+sounddevice

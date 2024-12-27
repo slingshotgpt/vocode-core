@@ -1,0 +1,18 @@
+FROM python:3.10-bullseye 
+
+WORKDIR /code
+
+RUN apt-get update
+RUN apt-get install gcc g++ ffmpeg lsb-release curl gpg -y
+RUN curl -fsSL https://packages.redis.io/gpg | gpg --dearmor -o /usr/share/keyrings/redis-archive-keyring.gpg
+RUN echo "deb [signed-by=/usr/share/keyrings/redis-archive-keyring.gpg] https://packages.redis.io/deb $(lsb_release -cs) main" | tee /etc/apt/sources.list.d/redis.list
+RUN apt-get install -y redis portaudio19-dev
+
+RUN echo "Build running on architecture: $(uname -m)"
+
+COPY ./ /code/
+RUN pip install uv
+
+RUN uv pip install -r /code/requirements.txt --system
+
+CMD redis-server & uvicorn telephony_inbound:app --host 0.0.0.0 --port 80

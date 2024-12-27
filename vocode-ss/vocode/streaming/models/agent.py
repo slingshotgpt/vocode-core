@@ -56,6 +56,7 @@ class AgentType(str, Enum):
     WEBSOCKET_USER_IMPLEMENTED = "agent_websocket_user_implemented"
     ACTION = "agent_action"
     LANGCHAIN = "agent_langchain"
+    SLINGSHOT = "agent_slingshot"
 
 
 class FillerAudioConfig(BaseModel):
@@ -221,3 +222,18 @@ class RESTfulAgentText(RESTfulAgentOutput, type=RESTfulAgentOutputType.TEXT):  #
 
 class RESTfulAgentEnd(RESTfulAgentOutput, type=RESTfulAgentOutputType.END):  # type: ignore
     pass
+
+class SlingshotGPTAgentConfig(AgentConfig, type=AgentType.SLINGSHOT.value):  # type: ignore
+    openai_api_key: Optional[str] = None
+    prompt_preamble: str
+    model_name: str = CHAT_GPT_AGENT_DEFAULT_MODEL_NAME
+    base_url_override: Optional[str] = None
+    temperature: float = LLM_AGENT_DEFAULT_TEMPERATURE
+    max_tokens: int = LLM_AGENT_DEFAULT_MAX_TOKENS
+    azure_params: Optional[AzureOpenAIConfig] = None
+    vector_db_config: Optional[VectorDBConfig] = None
+    # TODO: the below fields should moved up to AgentConfig, and their logic should live in BaseAgent
+    use_backchannels: bool = False
+    backchannel_probability: float = 0.7
+    first_response_filler_message: Optional[str] = None
+    llm_fallback: Optional[LLMFallback] = None
