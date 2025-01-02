@@ -3,6 +3,7 @@ from typing import Dict, Optional
 
 import aiohttp
 from loguru import logger
+import requests
 
 from vocode.streaming.models.telephony import TwilioConfig
 from vocode.streaming.telephony.client.abstract_telephony_client import AbstractTelephonyClient

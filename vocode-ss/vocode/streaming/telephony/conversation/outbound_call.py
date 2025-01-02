@@ -83,8 +83,11 @@ class OutboundCall:
         else:
             raise ValueError("No telephony config provided")
 
+    # NOTE: removed async
     async def start(self):
         logger.debug("Starting outbound call")
+        print("Starting outbound call")
+        # Note: removed `await` on 12/29/2024
         self.telephony_id = await self.telephony_client.create_call(
             conversation_id=self.conversation_id,
             to_phone=self.to_phone,
@@ -93,7 +96,9 @@ class OutboundCall:
             telephony_params=self.telephony_params,
             digits=self.digits,
         )
+        print(f'conversation id {self.telephony_id}')
         if isinstance(self.telephony_client, TwilioClient):
+            print('should be Twilio Client') 
             call_config = TwilioCallConfig(
                 transcriber_config=self.transcriber_config,
                 agent_config=self.agent_config,
@@ -122,7 +127,12 @@ class OutboundCall:
             )
         else:
             raise ValueError("Unknown telephony client")
+        # Note: removed `await` on 12/28/2024
         await self.config_manager.save_config(self.conversation_id, call_config)
+        return self.conversation_id
 
     async def end(self):
+        # Note: removed `await` on 12/28/2024
+        #return await self.telephony_client.end_call(self.telephony_id)
+        print("== outbound call ended inside OutboundCall == ")
         return await self.telephony_client.end_call(self.telephony_id)

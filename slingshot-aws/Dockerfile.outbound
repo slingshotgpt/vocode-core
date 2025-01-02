@@ -18,8 +18,8 @@ RUN uv pip install -r /code/requirements.txt --system
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     PYTHONOPTIMIZE=1 \
-    #CALL_TYPE=inbound \
+    #CALL_TYPE=outbound \
     #CLIENT_NAME=kookmin \
     PAYMENT_API=prod
 
-CMD redis-server & uvicorn telephony_inbound:app --host 0.0.0.0 --port 80
+CMD redis-server & uvicorn telephony_outbound:app --host 0.0.0.0 --port 80

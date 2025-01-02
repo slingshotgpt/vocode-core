@@ -43,8 +43,8 @@ def build(directory, ecr_repository, tag):
     dockerfile_path = f"{directory}/Dockerfile.{instance_config.URL_EXT}"
     commands = [
         f"aws ecr get-login-password --region {aws_region} | docker login --username AWS --password-stdin {ecr_url}",
-        #f"docker build --platform=linux/arm64 -f {dockerfile_path} -t {ecr_repository}:{tag} .",
-        f"docker build --platform=linux/amd64 -f {dockerfile_path} -t {ecr_repository}:{tag} .",
+        f"docker build --platform=linux/arm64 -f {dockerfile_path} -t {ecr_repository}:{tag} .",
+        #f"docker build --platform=linux/amd64 -f {dockerfile_path} -t {ecr_repository}:{tag} .",
         f"docker tag {ecr_repository}:{tag} {ecr_url}/{ecr_repository}:{tag}",
         f"docker push {ecr_url}/{ecr_repository}:{tag}",
     ]

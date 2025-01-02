@@ -82,6 +82,7 @@ from vocode.utils.sentry_utils import (
     sentry_create_span,
     synthesizer_base_name_if_should_report_to_sentry,
 )
+from common import config_manager
 
 BACKCHANNEL_PATTERNS = [
     r"m+-?hm+",
@@ -1039,6 +1040,9 @@ class StreamingConversation(AudioPipeline[OutputDeviceType]):
         if self.actions_worker is not None:
             logger.debug("Terminating actions worker")
             await self.actions_worker.terminate()
+        logger.debug("Deleting config manager") 
+        await config_manager.delete_config(self.id)
+        
         logger.debug("Successfully terminated")
 
     def is_active(self):

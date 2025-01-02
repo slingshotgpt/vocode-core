@@ -14,7 +14,7 @@ from vocode.streaming.telephony.config_manager.redis_config_manager import Redis
 from vocode.streaming.telephony.conversation.outbound_call import OutboundCall
 
 BASE_URL = os.environ["BASE_URL"]
-
+print(BASE_URL)
 
 async def main():
     config_manager = RedisConfigManager()

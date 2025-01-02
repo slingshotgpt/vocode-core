@@ -16,8 +16,24 @@ from vocode.logging import configure_pretty_logging
 from vocode.streaming.models.agent import ChatGPTAgentConfig #, SlingshotGPTAgentConfig
 from vocode.streaming.models.message import BaseMessage
 from vocode.streaming.models.telephony import TwilioConfig
-from vocode.streaming.telephony.config_manager.redis_config_manager import RedisConfigManager
 from vocode.streaming.telephony.server.base import TelephonyServer, TwilioInboundCallConfig
+from vocode.streaming.models.transcriber import (
+    DeepgramTranscriberConfig,
+    PunctuationEndpointingConfig,
+)
+from common import config_manager
+
+from vocode.streaming.telephony.constants import (
+    DEFAULT_AUDIO_ENCODING,
+    DEFAULT_CHUNK_SIZE,
+    DEFAULT_SAMPLING_RATE,
+)
+from vocode.streaming.models.synthesizer import (
+    AzureSynthesizerConfig,
+    AZURE_SYNTHESIZER_DEFAULT_VOICE_NAME,
+    AZURE_SYNTHESIZER_DEFAULT_PITCH,
+    AZURE_SYNTHESIZER_DEFAULT_RATE, 
+)
 
 # if running from python, this will load the local .env
 # docker-compose will load the .env file by itself
@@ -28,22 +44,19 @@ configure_pretty_logging()
 print("Logging at App")
 app = FastAPI(docs_url=None)
 
-config_manager = RedisConfigManager()
+# inbound
+if os.getenv("LOCALENV", None) == 'development':
+    BASE_URL = os.getenv("BASE_URL", 'slingshotgpt.ngrok.app')
+else:    
+    BASE_URL = 'instance-1.lb-1.inbound.slingshotgpt-dialers.com' 
 
-BASE_URL = 'instance-1.lb-1.inbound.slingshotgpt-dialers.com' #os.getenv("BASE_URL")
-
-if not BASE_URL:
-    ngrok_auth = os.environ.get("NGROK_AUTH_TOKEN")
-    if ngrok_auth is not None:
-        ngrok.set_auth_token(ngrok_auth)
-    port = sys.argv[sys.argv.index("--port") + 1] if "--port" in sys.argv else 3000
-
-    # Open a ngrok tunnel to the dev server
-    BASE_URL = ngrok.connect(port).public_url.replace("https://", "")
-    logger.info('ngrok tunnel "{}" -> "http://127.0.0.1:{}"'.format(BASE_URL, port))
+logger.info(BASE_URL)
 
 if not BASE_URL:
     raise ValueError("BASE_URL must be set in environment if not using pyngrok")
+
+# Transcriber config (Deepgram) - language, model
+# Synthesizer config (Azure) - language, model 
 
 telephony_server = TelephonyServer(
     base_url=BASE_URL,
@@ -53,8 +66,10 @@ telephony_server = TelephonyServer(
             url="/inbound_call",
             agent_config=ChatGPTAgentConfig(
             #agent_config=SlingshotGPTAgentConfig(
-                initial_message=BaseMessage(text="Welcome to SlingshotGPT.  How can I assist you today?"),
-                prompt_preamble="You are helpful assistant and answer how to develop an AI agent only.",
+                initial_message=BaseMessage(text="안녕하세요? 무엇을 도와드릴까요?"),
+                prompt_preamble="당신은 한국말 도우미입니다.",
+                #initial_message=BaseMessage(text="Welcome to SlingshotGPT.  How can I assist you today?"),
+                #prompt_preamble="You are helpful assistant and answer how to develop an AI agent only.",
                 generate_responses=True,
                 interrupt_sensitivity="high",
                 initial_message_delay=2,
@@ -66,6 +81,25 @@ telephony_server = TelephonyServer(
             #     ),
             #     generate_responses=False,
             # ),
+            transcriber_config=DeepgramTranscriberConfig(
+                #language='en-US',
+                language='ko-KR',
+                model='nova-2',
+                sampling_rate=DEFAULT_SAMPLING_RATE,
+                audio_encoding=DEFAULT_AUDIO_ENCODING,
+                chunk_size=DEFAULT_CHUNK_SIZE,
+                endpointing_config=PunctuationEndpointingConfig(),
+            ),
+            synthesizer_config=AzureSynthesizerConfig(
+            #    language_code="en-US", # "ko-KR"
+                language_code="ko-KR",
+            #    voice_name=AZURE_SYNTHESIZER_DEFAULT_VOICE_NAME, 
+                voice_name="ko-KR-SunHiNeural",
+            #    pitch=AZURE_SYNTHESIZER_DEFAULT_PITCH,
+            #    rate=AZURE_SYNTHESIZER_DEFAULT_RATE,
+                sampling_rate=DEFAULT_SAMPLING_RATE,
+                audio_encoding=DEFAULT_AUDIO_ENCODING,
+            ),
             twilio_config=TwilioConfig(
                 account_sid=os.environ["TWILIO_ACCOUNT_SID"],
                 auth_token=os.environ["TWILIO_AUTH_TOKEN"],
