@@ -14,6 +14,8 @@ COPY ./ /code/
 RUN pip install uv
 
 RUN uv pip install -r /code/requirements.txt --system
+RUN pip install supabase==2.11.0
+RUN pip install websockets==14.2  # ad-hoc solution to avoid conflict from supabase
 
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
@@ -22,4 +24,4 @@ ENV PYTHONUNBUFFERED=1 \
     #CLIENT_NAME=kookmin \
     PAYMENT_API=prod
 
-CMD redis-server & uvicorn telephony_inbound:app --host 0.0.0.0 --port 80
+CMD redis-server --dbfilename new_dump.rdb & uvicorn telephony_inbound:app --host 0.0.0.0 --port 80

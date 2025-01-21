@@ -34,7 +34,7 @@ sentry-sdk = { extras = ["fastapi"], version = "^2.3.1" }
 sounddevice = "^0.4.7"
 tiktoken = "^0.7.0"
 uvicorn = "^0.30.0"
-websockets = "^14.1"
+websockets = "^14.1"  # 14.1
 nltk = "^3.8.1"
 
 # LLM Providers

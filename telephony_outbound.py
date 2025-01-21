@@ -23,35 +23,36 @@ from vocode.streaming.telephony.server.base import TelephonyServer, TwilioInboun
 from vocode.streaming.models.transcriber import DeepgramTranscriberConfig
 from vocode.streaming.models.events import Event
 from vocode.streaming.utils import events_manager
-from common import config_manager
+from common import config_manager, get_secret
 
 # customer dial client
 from customer_dialers.make_call import dials as make_dials
+from agent_config import AgentConfig
+
 # if running from python, this will load the local .env
 # docker-compose will load the .env file by itself
-load_dotenv()
+#load_dotenv() # not for production
 
 configure_pretty_logging()
 
-print("Logging at App")
+print(f"Logging at App: Mode {os.getenv('LOCALENV')}")
 app = FastAPI(docs_url=None)
 
-# inbound
-#BASE_URL = 'instance-1.lb-1.outbound.slingshotgpt-dialers.com' #os.getenv("BASE_URL")
-BASE_URL = os.getenv("BASE_URL")
+# outbound
+if os.getenv("LOCALENV") == 'development':
+    BASE_URL = os.getenv("BASE_URL", "slingshotgpt.ngrok.app")
+else:    
+    BASE_URL = 'instance-1.lb-1.outbound.slingshotgpt-dialers.com' 
+    secret_name = 'slingshotgpt_vocode_credentials'
+    secret = get_secret(secret_name)
+    
+    if secret and isinstance(secret, dict):
+        for key, value in secret.items():
+            print(f"SECRET is being retrieved {key}")
+            os.environ[key] = value
+
 logger.info(BASE_URL)
-# local development
-#BASE_URL = os.getenv("BASE_URL")
-
-if not BASE_URL:
-    ngrok_auth = os.environ.get("NGROK_AUTH_TOKEN")
-    if ngrok_auth is not None:
-        ngrok.set_auth_token(ngrok_auth)
-    port = sys.argv[sys.argv.index("--port") + 1] if "--port" in sys.argv else 3000
-
-    # Open a ngrok tunnel to the dev server
-    BASE_URL = ngrok.connect(port).public_url.replace("https://", "")
-    logger.info('ngrok tunnel "{}" -> "http://127.0.0.1:{}"'.format(BASE_URL, port))
+agent_config = AgentConfig()
 
 if not BASE_URL:
     raise ValueError("BASE_URL must be set in environment if not using pyngrok")
@@ -95,7 +96,7 @@ async def start_worker():
             #if os.environ.get("CLIENT_NAME") is None:
             #    print("No client name found")
             #    continue
-            print("Starting a dial...")
+            print(f"Starting a dial...{BASE_URL}")
             await make_dials(base_url=BASE_URL)
             print("Dial finished. Waiting for the next cycle.")
         except Exception as e:
@@ -104,14 +105,8 @@ async def start_worker():
             # Wait before making the next dial
             await asyncio.sleep(10)
 
-#worker_thread = threading.Thread(target=start_worker)
-#worker_thread.start()
-#asyncio.run(start_worker())
 loop = asyncio.get_event_loop()
 try:
     loop.create_task(start_worker())
-    #loop.run_forever()
 except KeyboardInterrupt:
     print("Worker stopped by user")
-#finally:
-#    loop.close()

@@ -6,7 +6,16 @@ RUN apt-get update
 RUN apt-get install gcc g++ ffmpeg lsb-release curl gpg -y
 RUN curl -fsSL https://packages.redis.io/gpg | gpg --dearmor -o /usr/share/keyrings/redis-archive-keyring.gpg
 RUN echo "deb [signed-by=/usr/share/keyrings/redis-archive-keyring.gpg] https://packages.redis.io/deb $(lsb_release -cs) main" | tee /etc/apt/sources.list.d/redis.list
-RUN apt-get install -y redis portaudio19-dev
+#RUN apt-get install -y redis portaudio19-dev
+RUN apt-get install -y portaudio19-dev 
+
+# Install Redis 6.0.16 from source
+RUN wget http://download.redis.io/releases/redis-6.0.16.tar.gz && \
+    tar xzf redis-6.0.16.tar.gz && \
+    cd redis-6.0.16 && \
+    make && \
+    make install && \
+    cd .. && rm -rf redis-6.0.16 redis-6.0.16.tar.gz
 
 RUN echo "Build running on architecture: $(uname -m)"
 
@@ -14,6 +23,8 @@ COPY ./ /code/
 RUN pip install uv
 
 RUN uv pip install -r /code/requirements.txt --system
+RUN pip install supabase==2.11.0
+RUN pip install websockets==14.2
 
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
@@ -22,4 +33,4 @@ ENV PYTHONUNBUFFERED=1 \
     #CLIENT_NAME=kookmin \
     PAYMENT_API=prod
 
-CMD redis-server & uvicorn telephony_outbound:app --host 0.0.0.0 --port 80
+CMD redis-server --dbfilename new_dump.rdb & uvicorn telephony_outbound:app --host 0.0.0.0 --port 80

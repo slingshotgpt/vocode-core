@@ -21,7 +21,7 @@ from vocode.streaming.telephony.constants import (
 )
 from vocode.streaming.telephony.conversation.outbound_call import OutboundCall
 from vocode.streaming.models.message import BaseMessage
-
+from call_config import CallConfig
 
 from vocode.streaming.models.synthesizer import (
     AzureSynthesizerConfig,
@@ -31,12 +31,14 @@ from vocode.streaming.models.synthesizer import (
 )
 
 from common import config_manager 
+from customer_dialers.dialers import (
+    get_next_customer_from_dialer,
+    mark_called_customer_from_dialer
+)
 
 logger = logging.getLogger(__name__)
 print = logger.info
 
-#base_url = "instance-1.lb-1.outbound.slingshotgpt-dialers.com"
-base_url = "slingshotgpt.ngrok.app"
 
 async def handle_outbound_call(outbound_call, dnis, phone_number, max_call_duration=300):
 
@@ -76,7 +78,7 @@ async def handle_outbound_call(outbound_call, dnis, phone_number, max_call_durat
 
         # Post-call processing
         if conversation_id:
-            config_manager.delete_config(conversation_id)
+            await config_manager.delete_config(conversation_id)
         await asyncio.sleep(2)
 
     except Exception as e:
@@ -84,22 +86,27 @@ async def handle_outbound_call(outbound_call, dnis, phone_number, max_call_durat
         raise e
 
 async def dials(base_url=None, call_type=None, client_name=None, language=None, campaign_id=None):
-    dnis = "+16507188240"
+    dnis = "+16508440652"
     count = 0
 
     while True:
 
         # Get customer phone number from Dial Controller
-        phone_number = "+16503907338"
+        contact_id, phone_number, custom_language = get_next_customer_from_dialer()
+        print(f"next customer to call {phone_number} with language {custom_language}")
+        if phone_number is None:
+            await asyncio.sleep(5)
+            continue
         
+        language_config = CallConfig().get_language_config(direction="out", custom_language=custom_language)
+        print(f"Language config {str(language_config)}")
         # make a call
         outbound_call = OutboundCall(
             base_url=base_url,
             to_phone=phone_number,
             from_phone=dnis,
             transcriber_config=DeepgramTranscriberConfig(
-                #language='en-US',
-                language='ko-KR',
+                language=language_config["transcriber_language"],
                 model='nova-2',
                 sampling_rate=DEFAULT_SAMPLING_RATE,
                 audio_encoding=DEFAULT_AUDIO_ENCODING,
@@ -107,19 +114,15 @@ async def dials(base_url=None, call_type=None, client_name=None, language=None, 
                 endpointing_config=PunctuationEndpointingConfig(),
             ),
             synthesizer_config=AzureSynthesizerConfig(
-            #    language_code="en-US", # "ko-KR"
-                language_code="ko-KR",
-            #    voice_name=AZURE_SYNTHESIZER_DEFAULT_VOICE_NAME, 
-                voice_name="ko-KR-SunHiNeural",
-            #    pitch=AZURE_SYNTHESIZER_DEFAULT_PITCH,
-            #    rate=AZURE_SYNTHESIZER_DEFAULT_RATE,
+                language_code=language_config["synthesizer_language_code"], 
+                voice_name=language_config["synthesizer_voice_name"], 
                 sampling_rate=DEFAULT_SAMPLING_RATE,
                 audio_encoding=DEFAULT_AUDIO_ENCODING,
             ),
             config_manager=config_manager,
             agent_config=ChatGPTAgentConfig(
-                initial_message=BaseMessage(text="안녕하세요. 국민은행에서 전화드립니다."), #Welcome to SlingshotGPT.  How can I assist you today?"),
-                prompt_preamble="당신은 한국말 도우미 입니다.", #You are helpful assistant and answer how to develop an AI agent only.",
+                initial_message=BaseMessage(text=language_config["initial_message"]), 
+                prompt_preamble=language_config["prompt_preamble"], 
                 generate_responses=True,
                 interrupt_sensitivity="high",
                 initial_message_delay=2,
@@ -139,7 +142,8 @@ async def dials(base_url=None, call_type=None, client_name=None, language=None, 
             break
         
         # Optionally, delay before the next call
+        mark_called_customer_from_dialer(contact_id, phone_number)
         await asyncio.sleep(5)
-        break # for now. 
+        #break # for now. 
 
     print("Dialer finished!")

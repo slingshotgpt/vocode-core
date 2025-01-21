@@ -3,6 +3,7 @@ import time
 import signal 
 import sys
 import argparse
+import os
 
 def run_command(command):
     """Run a shell command in a non-blocking subprocess."""
@@ -60,6 +61,7 @@ def terminate_processes(signum, frame):
 def main():
     parser = argparse.ArgumentParser(description="Start services for telephony application.")
     parser.add_argument("--call_type", choices=["inbound", "outbound"], default="inbound", help="Specify call type: inbound or outbound.")
+    parser.add_argument("--language", choices=["en", "kr"], default="en", help="Specify language: English, Korean")
     args = parser.parse_args()
 
     global commands
@@ -68,6 +70,9 @@ def main():
         "redis-server",
         f"uvicorn telephony_{args.call_type}:app --host 0.0.0.0 --port 3000"
     ]
+
+    # set global variable
+    os.environ["LANGUAGE"] = args.language
 
     # Start subprocesses
     for cmd in commands:

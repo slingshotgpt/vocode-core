@@ -24,6 +24,8 @@ from vocode.streaming.models.message import BaseMessage, BotBackchannel, LLMToke
 from vocode.streaming.models.transcript import Message
 from vocode.streaming.vector_db.factory import VectorDBFactory
 from vocode.utils.sentry_utils import CustomSentrySpans, sentry_create_span
+from agent_config import AgentConfig
+from call_config import CallConfig
 
 ChatGPTAgentConfigType = TypeVar("ChatGPTAgentConfigType", bound=ChatGPTAgentConfig)
 
@@ -257,7 +259,13 @@ class ChatGPTAgent(RespondAgent[ChatGPTAgentConfigType]):
             sentry_callable=sentry_sdk.start_span, op=CustomSentrySpans.TIME_TO_FIRST_TOKEN
         )
 
-        stream = await self._create_openai_stream(chat_parameters)
+        #stream = await self._create_openai_stream(chat_parameters)
+        first_sentence, stream, _ = await AgentConfig().chat_completion(human_input, CallConfig().get_call_metadata())
+
+        if isinstance(first_sentence, str):
+            yield StreamedResponse(message=LLMToken(text=first_sentence), is_interruptible=True)
+        else: 
+            yield StreamedResponse(message=first_sentence, is_interruptible=True)
 
         response_generator = collate_response_async
         using_input_streaming_synthesizer = (
@@ -267,9 +275,7 @@ class ChatGPTAgent(RespondAgent[ChatGPTAgentConfigType]):
             response_generator = stream_response_async
         async for message in response_generator(
             conversation_id=conversation_id,
-            gen=openai_get_tokens(
-                stream,
-            ),
+            gen=stream, #openai_get_tokens(stream),
             get_functions=True,
             sentry_span=ttft_span,
         ):

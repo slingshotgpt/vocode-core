@@ -34,21 +34,31 @@ from vocode.streaming.models.synthesizer import (
     AZURE_SYNTHESIZER_DEFAULT_PITCH,
     AZURE_SYNTHESIZER_DEFAULT_RATE, 
 )
+from common import get_secret
+from call_config import CallConfig
 
 # if running from python, this will load the local .env
 # docker-compose will load the .env file by itself
-load_dotenv()
+#load_dotenv()
 
 configure_pretty_logging()
 
-print("Logging at App")
+print(f"Logging at App: Mode {os.getenv('LOCALENV')}")
 app = FastAPI(docs_url=None)
 
 # inbound
-if os.getenv("LOCALENV", None) == 'development':
+if os.getenv("LOCALENV") == 'development':
     BASE_URL = os.getenv("BASE_URL", 'slingshotgpt.ngrok.app')
 else:    
     BASE_URL = 'instance-1.lb-1.inbound.slingshotgpt-dialers.com' 
+
+    secret_name = 'slingshotgpt_vocode_credentials'
+    secret = get_secret(secret_name)
+    
+    if secret and isinstance(secret, dict):
+        for key, value in secret.items():
+            print(f"Read secret for {key}")
+            os.environ[key] = value
 
 logger.info(BASE_URL)
 
@@ -57,6 +67,7 @@ if not BASE_URL:
 
 # Transcriber config (Deepgram) - language, model
 # Synthesizer config (Azure) - language, model 
+language_config = CallConfig().get_language_config()
 
 telephony_server = TelephonyServer(
     base_url=BASE_URL,
@@ -65,11 +76,8 @@ telephony_server = TelephonyServer(
         TwilioInboundCallConfig(
             url="/inbound_call",
             agent_config=ChatGPTAgentConfig(
-            #agent_config=SlingshotGPTAgentConfig(
-                initial_message=BaseMessage(text="안녕하세요? 무엇을 도와드릴까요?"),
-                prompt_preamble="당신은 한국말 도우미입니다.",
-                #initial_message=BaseMessage(text="Welcome to SlingshotGPT.  How can I assist you today?"),
-                #prompt_preamble="You are helpful assistant and answer how to develop an AI agent only.",
+                initial_message=BaseMessage(text=language_config["initial_message"]), 
+                prompt_preamble=language_config["prompt_preamble"], 
                 generate_responses=True,
                 interrupt_sensitivity="high",
                 initial_message_delay=2,
@@ -82,8 +90,7 @@ telephony_server = TelephonyServer(
             #     generate_responses=False,
             # ),
             transcriber_config=DeepgramTranscriberConfig(
-                #language='en-US',
-                language='ko-KR',
+                language=language_config["transcriber_language"], 
                 model='nova-2',
                 sampling_rate=DEFAULT_SAMPLING_RATE,
                 audio_encoding=DEFAULT_AUDIO_ENCODING,
@@ -91,12 +98,8 @@ telephony_server = TelephonyServer(
                 endpointing_config=PunctuationEndpointingConfig(),
             ),
             synthesizer_config=AzureSynthesizerConfig(
-            #    language_code="en-US", # "ko-KR"
-                language_code="ko-KR",
-            #    voice_name=AZURE_SYNTHESIZER_DEFAULT_VOICE_NAME, 
-                voice_name="ko-KR-SunHiNeural",
-            #    pitch=AZURE_SYNTHESIZER_DEFAULT_PITCH,
-            #    rate=AZURE_SYNTHESIZER_DEFAULT_RATE,
+                language_code=language_config["synthesizer_language_code"], 
+                voice_name=language_config["synthesizer_voice_name"], 
                 sampling_rate=DEFAULT_SAMPLING_RATE,
                 audio_encoding=DEFAULT_AUDIO_ENCODING,
             ),
